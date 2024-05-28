@@ -29,10 +29,21 @@ python manage.py startapp recipes
   <summary><h1>Project Local Setup</h1></summary>
  
 
-### Create Environment
+### Step 1: Clone The Project
+clone the repo using the below command
+```
+git clone https://github.com/Antony-M1/recipehub.git
+```
+
+### Step 2: Create Environment
 Run the below command to create the environment
 ```
 python3.10 -m venv .venv
+```
+
+### Step 2: Install the Requirements
+```
+pip install -r requirements.txt
 ```
 </details>
 
