@@ -1,4 +1,5 @@
 import logging
+from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
 
@@ -22,3 +23,8 @@ class CustomMiddleware:
 
 
         return response
+
+    def process_exception(self, request, exception):
+        logger.critical(f"An error occurred: {exception}", exc_info=True)
+        
+        return JsonResponse({'error': 'Something went wrong'}, status=500)
