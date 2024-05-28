@@ -18,10 +18,18 @@ from django.contrib import admin
 from django.urls import path, include
 from .views import (
     home,
-    UserSignupAPI
+    UserSignupAPI,
+    UserLoginAPI
+)
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
 )
 
 urlpatterns = [
     path('home', home, name='home'),
     path('signup', UserSignupAPI.as_view(), name='signup'),
+    path('login', UserLoginAPI.as_view(), name='login'),
+    path('token', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
 ]

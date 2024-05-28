@@ -27,4 +27,4 @@ class CustomMiddleware:
     def process_exception(self, request, exception):
         logger.critical(f"An error occurred: {exception}", exc_info=True)
         
-        return JsonResponse({'error': 'Something went wrong'}, status=500)
+        return JsonResponse({'status': 'Something went wrong', 'error':str(exception)}, status=500)
