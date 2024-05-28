@@ -130,6 +130,13 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Path to the logs directory
+LOGS_DIR = BASE_DIR / 'logs'
+
+# Create the logs directory if it doesn't exist
+if not LOGS_DIR.exists():
+    LOGS_DIR.mkdir()
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
