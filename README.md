@@ -21,3 +21,15 @@ python manage.py startapp recipes
 ```
 
 </details>
+
+<details>
+  <summary><h1>Project Local Setup</h1></summary>
+ 
+
+### Create Environment
+Run the below command to create the environment
+```
+python3.10 -m venv .venv
+```
+</details>
+
