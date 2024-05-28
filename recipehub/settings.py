@@ -56,6 +56,8 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'recipehub.urls'
 
+AUTH_USER_MODEL = 'recipes.User'
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
