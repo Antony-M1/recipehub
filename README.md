@@ -4,6 +4,9 @@
 
 **RecipeHub** is a web-based platform where users can share, discover, and manage recipes. Users can sign up, log in, and securely manage their recipes, performing create, read, update, and delete (CRUD) operations. Each recipe includes detailed information such as title, description, ingredients, preparation steps, cooking time, and serving size. Users can categorize recipes, search and filter them by various criteria, and rate and review recipes to share their experiences with others.
 
+# Prerequisite
+* [Python 3.10](https://www.python.org/downloads/release/python-3100/)
+* [PostgreSQL 16](https://github.com/Antony-M1/docker-postgresql/tree/main)
 
 <details>
   <summary><h1>Django Framework Usefull Commends</h1></summary>
