@@ -3,3 +3,21 @@
 
 
 **RecipeHub** is a web-based platform where users can share, discover, and manage recipes. Users can sign up, log in, and securely manage their recipes, performing create, read, update, and delete (CRUD) operations. Each recipe includes detailed information such as title, description, ingredients, preparation steps, cooking time, and serving size. Users can categorize recipes, search and filter them by various criteria, and rate and review recipes to share their experiences with others.
+
+
+<details>
+  <summary><h1>Django Framework Usefull Commends</h1></summary>
+ 
+
+### Create A Project
+this command create a project in the `workspace` directory iteself
+```
+django-admin startproject recipehub .
+```
+
+### Create a new Django app
+```
+python manage.py startapp recipes
+```
+
+</details>
