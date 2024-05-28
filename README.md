@@ -20,7 +20,7 @@ Only the eample file will be here you have to fill your own data
 ```
 SECRET_KEY=<YOUR_SECRET_KE>
 ```
-<details>
+</details>
 
 <details>
   <summary><h1>Django Framework Usefull Commends</h1></summary>
