@@ -8,6 +8,20 @@
 * [Python 3.10](https://www.python.org/downloads/release/python-3100/)
 * [PostgreSQL 16](https://github.com/Antony-M1/docker-postgresql/tree/main)
 
+# .env
+
+After cloning the project have to setup the `.env` file in the workspace folder. this file contains all the `secrets`, `credentials` & `API Keys`.
+
+Only the eample file will be here you have to fill your own data
+<details>
+  <summary><h4>.env example</h4></summary>
+
+
+```
+SECRET_KEY=<YOUR_SECRET_KE>
+```
+<details>
+
 <details>
   <summary><h1>Django Framework Usefull Commends</h1></summary>
  
