@@ -6,7 +6,7 @@
 
 # Prerequisite
 * [Python 3.10](https://www.python.org/downloads/release/python-3100/)
-* [PostgreSQL 16](https://github.com/Antony-M1/docker-postgresql/tree/main)
+
 
 # .env
 
@@ -55,9 +55,11 @@ Run the below command to create the environment
 python3.10 -m venv .venv
 ```
 
-### Step 2: Install the Requirements
+### Step 3: Install the Requirements
 ```
 pip install -r requirements.txt
 ```
+
+
 </details>
 
