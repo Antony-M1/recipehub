@@ -19,7 +19,13 @@ from django.urls import path, include
 from .views import (
     home,
     UserSignupAPI,
-    UserLoginAPI
+    UserLoginAPI,
+    ListCreateRecipeAPI,
+    ReviewRecipeAPI,
+    ReviewDetailAPI,
+    ListUpdateDeleteRecipeAPI,
+    
+    
 )
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -30,6 +36,10 @@ urlpatterns = [
     path('home', home, name='home'),
     path('signup', UserSignupAPI.as_view(), name='signup'),
     path('login', UserLoginAPI.as_view(), name='login'),
+    path('recipe', ListCreateRecipeAPI.as_view(), name='create-recipe'),
+    path('recipe/<int:pk>', ListUpdateDeleteRecipeAPI.as_view(), name='update-recipe'),
+    path('reviews', ReviewRecipeAPI.as_view(), name='create-review'),
+    path('reviews/<int:pk>', ReviewDetailAPI.as_view(), name='review-detail'),
     path('token', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
 ]

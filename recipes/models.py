@@ -69,7 +69,7 @@ class Category(models.Model):
         verbose_name_plural = 'Categories'
     
 class Recipe(models.Model):
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
     description = models.TextField()
     ingredients = models.TextField()

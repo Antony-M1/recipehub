@@ -1,6 +1,6 @@
 # myapp/serializers.py
 from rest_framework import serializers
-from recipes.models import User
+from recipes.models import User, Category, Recipe, Review
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -32,3 +32,74 @@ class UserLoginSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('email', 'password')
+
+
+class CreateRecipieSerializer(serializers.ModelSerializer):
+    # user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    id = serializers.IntegerField(read_only=True)
+    title = serializers.CharField(max_length=100)
+    description = serializers.CharField()
+    ingredients = serializers.CharField()
+    preparation_steps = serializers.CharField()
+    cooking_time = serializers.FloatField()
+    serving_size = serializers.IntegerField()
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+    
+    class Meta:
+        model = Recipe
+        fields = ('id', 'user', 'title', 'description', 'ingredients', 'preparation_steps', 'cooking_time', 'serving_size', 'category')
+
+class UpdateRecipeSerializer(serializers.ModelSerializer):
+    user_id = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    id = serializers.IntegerField(read_only=True)
+    title = serializers.CharField(max_length=100, required=False)
+    description = serializers.CharField(required=False)
+    ingredients = serializers.CharField(required=False)
+    preparation_steps = serializers.CharField(required=False)
+    cooking_time = serializers.FloatField(required=False)
+    serving_size = serializers.IntegerField(required=False)
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), required=False)
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'user_id', 'title', 'description', 'ingredients', 'preparation_steps', 'cooking_time', 'serving_size', 'category')
+
+class CreateRecipeSerializer2(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = '__all__'
+        read_only_fields = ['user_id', 'created_at', 'updated_at']
+        
+        
+class ReviewSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    id = serializers.IntegerField(read_only=True)
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
+    rating = serializers.IntegerField()
+    comment = serializers.CharField()
+
+    class Meta:
+        model = Review
+        fields = ('id', 'user', 'recipe', 'rating', 'comment')
+
+class UpdateReviewSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all(), required=False)
+    rating = serializers.IntegerField(required=False)
+    comment = serializers.CharField(required=False)
+
+    class Meta:
+        model = Review
+        fields = ('user', 'recipe', 'rating', 'comment')
+        read_only_fields = ('user',)
+        
+
+class DeleteReviewSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+
+class AllReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = '__all__'

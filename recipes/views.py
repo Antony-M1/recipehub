@@ -1,18 +1,28 @@
 import copy
 from django.shortcuts import render
 from django.http import HttpResponse
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, GenericAPIView, RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView, DestroyAPIView, ListCreateAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from django.db.utils import IntegrityError
 from .serializers import (
-    UserSerializer, UserLoginSerializer
+    UserSerializer, UserLoginSerializer, CreateRecipieSerializer, CreateRecipeSerializer2,
+    ReviewSerializer, UpdateReviewSerializer, UpdateRecipeSerializer, AllReviewSerializer
 )
+from .models import (
+    Recipe, Review
+)
+from .utils import success_response
 from .constant import RESPONSE_SUCSSS, RESPONSE_FAILED
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.authentication import authenticate
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
+from django.db import connection
+
+
 # Create your views here.
 
 def home(request):
@@ -52,7 +62,7 @@ class UserLoginAPI(CreateAPIView):
         tags=['Authentication'],
         operation_description="Login User",
         request_body=UserLoginSerializer,
-        responses={200: UserLoginSerializer}
+        responses={200: UserLoginSerializer},
     )
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -78,3 +88,181 @@ class UserLoginAPI(CreateAPIView):
             response["message"] = "Invalid credentials"
             response["data"] = request.data
             return Response(response, status=status.HTTP_401_UNAUTHORIZED)
+        
+
+
+class ListCreateRecipeAPI(ListCreateAPIView):
+    
+    queryset = Recipe.objects.all()
+    serializer_class = CreateRecipieSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination
+    
+    @swagger_auto_schema(
+        tags=['Recipe'],
+        operation_description="Create Recipe",
+        request_body=CreateRecipieSerializer,
+        responses={201: CreateRecipieSerializer}
+    )
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return success_response(serializer.data, status=status.HTTP_201_CREATED, message="Recipe Created Sussfully")
+    
+    # @swagger_auto_schema(
+    #     tags=['Recipe'],
+    #     operation_description="Create Recipe",
+    #     # request_body=CreateRecipieSerializer,
+    #     # responses={201: CreateRecipieSerializer}
+    # )
+    # def get(self, request):
+    #     response = super().get(request)
+    #     return success_response(data=response.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        tags=['Recipe'],
+        operation_description="List Recipes"
+    )
+    def get(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            res = self.get_paginated_response(serializer.data)
+            return success_response(data = res.data, status=status.HTTP_200_OK)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(data=serializer.data, status=status.HTTP_200_OK)
+
+class ListUpdateDeleteRecipeAPI(RetrieveUpdateDestroyAPIView):
+    queryset = Recipe.objects.all()
+    serializer_class = UpdateRecipeSerializer
+    permission_classes = [IsAuthenticated]
+    
+    @swagger_auto_schema(
+        tags=['Recipe'],
+        operation_description="Update Recipe",
+        request_body=UpdateRecipeSerializer,
+        responses={201: UpdateRecipeSerializer}
+    )
+    def put(self, request, *args, **kwargs):
+        recipe_user_id = Recipe.objects.get(id=kwargs['pk']).user_id
+        if not request.user.id == recipe_user_id:
+            response = copy.deepcopy(RESPONSE_FAILED)
+            response["message"] = "You are not authorized to update this recipe"
+            return Response(response, status=status.HTTP_403_FORBIDDEN)
+        response = super().update(request, *args, **kwargs)
+        return success_response(data=response.data, status=status.HTTP_200_OK, message="Recipe Updated Sussfully")
+
+
+    @swagger_auto_schema(
+        tags=['Recipe'],
+        operation_description="Delete Recipe",
+        # request_body=UpdateRecipeSerializer,
+        # responses={201: UpdateRecipeSerializer}
+    )
+    def delete(self, request, *args, **kwargs):
+        recipe_user_id = Recipe.objects.get(id=kwargs['pk']).user_id
+        if not request.user.id == recipe_user_id:
+            response = copy.deepcopy(RESPONSE_FAILED)
+            response["message"] = "You are not authorized to delete this recipe"
+            return Response(response, status=status.HTTP_403_FORBIDDEN)
+        response = super().delete(request, *args, **kwargs)
+        return success_response(data=response.data, status=status.HTTP_204_NO_CONTENT, message="Recipe Deleted Sussfully")
+
+    @swagger_auto_schema(
+        tags=['Recipe'],
+        operation_description="Retrieve Recipe",
+        responses={200: UpdateRecipeSerializer}
+    )
+    def get(self, request, *args, **kwargs):
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    tr.*,
+                    tu.first_name, tu.last_name
+                FROM
+                    tabReview AS tr
+                LEFT JOIN tabUser AS tu
+            """)
+            rows = cursor.fetchall()
+        columns = [col[0] for col in cursor.description]
+        reviews = [dict(zip(columns, row)) for row in rows]
+        recipe = super().get(request, *args, **kwargs)
+
+        if recipe:
+            response = copy.deepcopy(RESPONSE_SUCSSS)
+            response['data']['recipe'] = recipe.data
+            response['data']['reviews'] = reviews
+            response['message'] = "Recipe Retrieved Sussfully"
+            return Response(response, status=status.HTTP_200_OK)
+        else:
+            response = copy.deepcopy(RESPONSE_FAILED)
+            response['message'] = "Recipe Not Found"
+            return Response(response, status=status.HTTP_404_NOT_FOUND)
+
+class ReviewRecipeAPI(CreateAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        tags=['Reviews'],
+        operation_description="Create a new review",
+        request_body=ReviewSerializer,
+        responses={201: ReviewSerializer},
+        security=[{'Bearer': []}]
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return success_response(serializer.data, status=status.HTTP_201_CREATED,message="Review Created Sussfully")
+
+# Retrieve and Update API
+class ReviewDetailAPI(RetrieveUpdateDestroyAPIView):
+    queryset = Review.objects.all()
+    serializer_class = UpdateReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        tags=['Reviews'],
+        operation_description="Retrieve a review",
+        responses={200: ReviewSerializer}
+    )
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        return success_response(data=response.data, status=status.HTTP_200_OK, message='Review Retrieved Sussfully')
+
+    @swagger_auto_schema(
+        tags=['Reviews'],
+        operation_description="Update a review",
+        request_body=ReviewSerializer,
+        responses={200: ReviewSerializer}
+    )
+    def put(self, request, *args, **kwargs):
+        review_user_id = Review.objects.get(id=kwargs['pk']).user_id
+        if not request.user.id == review_user_id:
+            response = copy.deepcopy(RESPONSE_FAILED)
+            response["message"] = "You are not authorized to update this review"
+            return Response(response, status=status.HTTP_403_FORBIDDEN)
+        response = super().update(request, *args, **kwargs)
+        return success_response(data=response.data, status=status.HTTP_200_OK, message="Review Updated Sussfully")
+    
+    
+    @swagger_auto_schema(
+        tags=['Reviews'],
+        operation_description="delete a review",
+        # request_body=ReviewSerializer,
+        # responses={200: ReviewSerializer}
+    )
+    def delete(self, request, *args, **kwargs):
+        review_user_id = Review.objects.get(id=kwargs['pk']).user_id
+        if not request.user.id == review_user_id:
+            response = copy.deepcopy(RESPONSE_FAILED)
+            response["message"] = "You are not authorized to delete this review"
+            return Response(response, status=status.HTTP_403_FORBIDDEN)
+        response = super().delete(request, *args, **kwargs)
+        return success_response(data=response.data, status=status.HTTP_200_OK, message="Review Deleted Sussfully")

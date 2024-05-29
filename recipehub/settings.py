@@ -64,10 +64,14 @@ MIDDLEWARE = [
 ]
 
 
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'EXCEPTION_HANDLER': 'recipes.utils.custom_exception_handler',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
 }
 
 SIMPLE_JWT = {
@@ -186,3 +190,35 @@ if not LOGS_DIR.exists():
 #         },
 #     },
 # }
+
+
+# SWAGGER_SETTINGS = {
+#     'SECURITY_DEFINITIONS': {
+#         'Basic': {
+#             'type': 'basic',
+#             'description': 'Basic HTTP Authentication'
+#         },
+#         'Bearer': {
+#             'type': 'apiKey',
+#             'in': 'header',
+#             'name': 'Authorization',
+#             'description': 'Bearer Token'
+#         }
+#     },
+#     'SECURITY_BACKENDS': ('drf_yasg.security.DjangoAuthFromQueryParameters',),
+#     'SECURITY_AUTHENTICATION_HEADER': 'Authorization',
+#     'SECURITY_AUTHENTICATION_METHOD': 'Basic',
+#     'SECURITY_AUTHENTICATION_QUERYSTRING_KEY': 'email',
+#     'SECURITY_AUTHENTICATION_QUERYSTRING_VALUE': 'password',
+# }
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'Authorization',
+            'description': 'Bearer <token>'
+        }
+    },
+}
