@@ -17,6 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from .views import (
+    ReviewDetailAPI,
+    ReviewRecipeAPI,
     home,
     UserSignupAPI,
     UserLoginAPI
@@ -32,4 +34,6 @@ urlpatterns = [
     path('login', UserLoginAPI.as_view(), name='login'),
     path('token', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
+    path('reviews', ReviewRecipeAPI.as_view(), name='create-review'),
+    path('reviews/<int:pk>', ReviewDetailAPI.as_view(), name='review-detail'),
 ]

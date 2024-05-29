@@ -1,6 +1,6 @@
 # myapp/serializers.py
 from rest_framework import serializers
-from recipes.models import User
+from recipes.models import Category, Recipe, User, Review
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -32,3 +32,25 @@ class UserLoginSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('email', 'password')
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
+    rating = serializers.IntegerField()
+    comment = serializers.CharField()
+
+    class Meta:
+        model = Review
+        fields = ('user', 'recipe', 'rating', 'comment')
+    
+class UpdateReviewSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all(), required=False)
+    rating = serializers.IntegerField(required=False)
+    comment = serializers.CharField(required=False)
+
+    class Meta:
+        model = Review
+        fields = ('user', 'recipe', 'rating', 'comment')
+        read_only_fields = ('user',) 

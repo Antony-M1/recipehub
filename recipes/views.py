@@ -1,15 +1,20 @@
 import copy
 from django.shortcuts import render
 from django.http import HttpResponse
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from django.db.utils import IntegrityError
+from rest_framework.permissions import IsAuthenticated
+
+from recipes.models import Recipe, Review
 from .serializers import (
-    UserSerializer, UserLoginSerializer
+    ReviewSerializer, UpdateReviewSerializer, UserSerializer, UserLoginSerializer
 )
 from .constant import RESPONSE_SUCSSS, RESPONSE_FAILED
+from .utils import success_response
+
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.authentication import authenticate
@@ -78,3 +83,46 @@ class UserLoginAPI(CreateAPIView):
             response["message"] = "Invalid credentials"
             response["data"] = request.data
             return Response(response, status=status.HTTP_401_UNAUTHORIZED)
+        
+
+class ReviewRecipeAPI(CreateAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        tags=['Reviews'],
+        operation_description="Create a new review",
+        request_body=ReviewSerializer,
+        responses={201: ReviewSerializer}
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        
+        return success_response(serializer.data, status=status.HTTP_201_CREATED)
+
+# Retrieve and Update API
+class ReviewDetailAPI(RetrieveUpdateAPIView):
+    queryset = Review.objects.all()
+    serializer_class = UpdateReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        tags=['Reviews'],
+        operation_description="Retrieve a review",
+        responses={200: ReviewSerializer}
+    )
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        return success_response(data=response.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        tags=['Reviews'],
+        operation_description="Update a review",
+        request_body=ReviewSerializer,
+        responses={200: ReviewSerializer}
+    )
+    def put(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        return success_response(data=response.data, status=status.HTTP_200_OK)
