@@ -68,6 +68,7 @@ class UserLoginAPI(CreateAPIView):
             response = copy.deepcopy(RESPONSE_SUCSSS)
             response["message"] = "Login Sussfully"
             response["data"] = {
+                "user_info": user.get_user_data_for_response(),
                 "refresh": str(refresh),
                 "access": str(refresh.access_token)
             }
