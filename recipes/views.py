@@ -14,16 +14,12 @@ from .models import (
     Recipe, Review
 )
 from .utils import success_response
-from .constant import RESPONSE_SUCSSS, RESPONSE_FAILED
+from .constant import RESPONSE_SUCSSS, RESPONSE_FAILED, CustomPagination
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.authentication import authenticate
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.pagination import PageNumberPagination
 from django.db import connection
-
-
-# Create your views here.
 
 def home(request):
     return HttpResponse("Hello Home")
@@ -53,7 +49,6 @@ class UserSignupAPI(CreateAPIView):
             response["data"] = request.data
             response["message"] = str(ex)
             return Response({"error": str(ex), "request_data":request.data}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class UserLoginAPI(CreateAPIView):
     serializer_class = UserLoginSerializer
@@ -90,13 +85,12 @@ class UserLoginAPI(CreateAPIView):
             return Response(response, status=status.HTTP_401_UNAUTHORIZED)
         
 
-
 class ListCreateRecipeAPI(ListCreateAPIView):
     
     queryset = Recipe.objects.all()
     serializer_class = CreateRecipieSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = PageNumberPagination
+    pagination_class = CustomPagination
     
     @swagger_auto_schema(
         tags=['Recipe'],
@@ -110,31 +104,42 @@ class ListCreateRecipeAPI(ListCreateAPIView):
         serializer.save()
 
         return success_response(serializer.data, status=status.HTTP_201_CREATED, message="Recipe Created Sussfully")
-    
-    # @swagger_auto_schema(
-    #     tags=['Recipe'],
-    #     operation_description="Create Recipe",
-    #     # request_body=CreateRecipieSerializer,
-    #     # responses={201: CreateRecipieSerializer}
-    # )
-    # def get(self, request):
-    #     response = super().get(request)
-    #     return success_response(data=response.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         tags=['Recipe'],
         operation_description="List Recipes"
     )
     def get(self, request):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            res = self.get_paginated_response(serializer.data)
-            return success_response(data = res.data, status=status.HTTP_200_OK)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return success_response(data=serializer.data, status=status.HTTP_200_OK)
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT trc.*, AVG(tr.rating) AS avg_rating
+                FROM tabRecipe AS trc
+                LEFT JOIN tabReview AS tr ON trc.id = tr.recipe_id
+                GROUP BY trc.id;
+            """)
+            columns = [col[0] for col in cursor.description]
+            recipes = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(recipes, request)
+
+        serializer = CreateRecipieSerializer(page, many=True)
+
+        if page is not None:
+            res = paginator.get_paginated_response(serializer.data)
+            return success_response(data = res.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data, status=status.HTTP_200_OK)
+
+    def get_page_size(self, request):
+        page_size = self.pagination_class.page_size
+        if 'page_size' in request.query_params:
+            try:
+                page_size = int(request.query_params['page_size'])
+            except ValueError:
+                pass
+        return page_size
+
 
 class ListUpdateDeleteRecipeAPI(RetrieveUpdateDestroyAPIView):
     queryset = Recipe.objects.all()
