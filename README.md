@@ -46,7 +46,7 @@ python manage.py startapp recipes
 ### Step 1: Clone The Project
 clone the repo using the below command
 ```
-git clone https://github.com/Antony-M1/recipehub.git
+git clone <GITHUB_REPO>
 ```
 
 ### Step 2: Create Environment
@@ -65,5 +65,16 @@ pip install -r requirements.txt
 python manage.py collectstatic
 ```
 
+Make Sure you have edited the `.env` file
+
+### Step 5: Run the project
+```
+python manage.py runserver
+```
+
 </details>
 
+
+## Production Setup
+
+For detailed production setup please refer this link [Click Here](https://github.com/Antony-M1/django-production-setup/blob/main/prod_docs/django-with-gunicorn-and-nginx.md)
