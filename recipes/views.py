@@ -1,7 +1,12 @@
 import copy
 from django.shortcuts import render
 from django.http import HttpResponse
-from rest_framework.generics import CreateAPIView, GenericAPIView, RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView, DestroyAPIView, ListCreateAPIView, ListAPIView
+from rest_framework.generics import (
+    CreateAPIView, GenericAPIView, 
+    RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView, 
+    UpdateAPIView, DestroyAPIView, ListCreateAPIView, 
+    ListAPIView, RetrieveAPIView
+)
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
@@ -9,7 +14,7 @@ from django.db.utils import IntegrityError
 from .serializers import (
     UserSerializer, UserLoginSerializer, CreateRecipieSerializer, CreateRecipeSerializer2,
     ReviewSerializer, UpdateReviewSerializer, UpdateRecipeSerializer, AllReviewSerializer,
-    SearchSerializer
+    SearchSerializer, ListRequestRecipieSerializer
 )
 from .models import (
     Recipe, Review
@@ -23,7 +28,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django.db import connection
 from drf_yasg import openapi
-
+from django_filters.rest_framework import DjangoFilterBackend
+import json
 
 # Create your views here.
 
@@ -93,7 +99,7 @@ class UserLoginAPI(CreateAPIView):
         
 
 
-class ListCreateRecipeAPI(ListCreateAPIView):
+class ListCreateRecipeAPI(CreateAPIView):
     
     queryset = Recipe.objects.all()
     serializer_class = CreateRecipieSerializer
@@ -113,33 +119,137 @@ class ListCreateRecipeAPI(ListCreateAPIView):
 
         return success_response(serializer.data, status=status.HTTP_201_CREATED, message="Recipe Created Sussfully")
     
+class ListGetRecipeAPI(CreateAPIView):
+    queryset = Recipe.objects.all()
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['avg_rating', 'title', 'description', 'ingredients', 
+                        'preparation_steps', 'cooking_time', 'serving_size',
+                        'category_id']
 
     @swagger_auto_schema(
         tags=['Recipe'],
-        operation_description="List Recipes"
+        operation_description="List Recipes",
+        request_body=ListRequestRecipieSerializer,
+        responses={200: CreateRecipieSerializer(many=True)}
     )
-    def get(self, request):
+    def post(self, request):
+        serializer_class = ListRequestRecipieSerializer
+        serializer = serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        filters = request.data.get('filters', [])
+
         with connection.cursor() as cursor:
-            cursor.execute("""
+            query = """
                 SELECT trc.*, AVG(tr.rating) AS avg_rating
                 FROM tabRecipe AS trc
                 LEFT JOIN tabReview AS tr ON trc.id = tr.recipe_id
-                GROUP BY trc.id;
-            """)
-            columns = [col[0] for col in cursor.description]
-            recipes = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            """
+            where_conditions = []
+            parameters = []
+            having_conditions = []
 
+            for f in filters:
+                field = f.get('field')
+                operator = f.get('operator')
+                value = f.get('value')
+                if field and operator and value:
+                    if operator == '=':
+                        if field == 'avg_rating':
+                            having_conditions.append(f"{field} = %s")
+                        else:
+                            where_conditions.append(f"{field} = %s")
+                        parameters.append(value)
+                    elif operator == '!=':
+                        if field == 'avg_rating':
+                            having_conditions.append(f"{field} != %s")
+                        else:
+                            where_conditions.append(f"{field} != %s")
+                        parameters.append(value)
+                    elif operator == 'in':
+                        if field == 'avg_rating':
+                            having_conditions.append(f"{field} != %s")
+                        else:
+                            where_conditions.append(f"{field} IN %s")
+                        parameters.append(value)
+                    elif operator == 'not in':
+                        if field == 'avg_rating':
+                            having_conditions.append(f"{field} NOT IN %s")
+                        else:
+                            where_conditions.append(f"{field} NOT IN %s")
+                        parameters.append(value)
+                    elif operator == 'like':
+                        if field == 'avg_rating':
+                            having_conditions.append(f"{field} NOT IN %s")
+                        else:
+                            where_conditions.append(f"{field} LIKE %s")
+                        parameters.append(f"%{value}%")
+
+            if where_conditions or having_conditions:
+                if where_conditions:
+                    query += " WHERE " + " AND ".join(where_conditions)
+                    query += " GROUP BY trc.id;"
+                if having_conditions:
+                    query += " GROUP BY trc.id"
+                    query += " HAVING " + " AND ".join(having_conditions)
+                    
+                
+
+                cursor.execute(query, parameters)
+                columns = [col[0] for col in cursor.description]
+                recipes_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            else:
+                # No filters applied, retrieve all recipes
+                cursor.execute("""
+                    SELECT trc.*, AVG(tr.rating) AS avg_rating
+                    FROM tabRecipe AS trc
+                    LEFT JOIN tabReview AS tr ON trc.id = tr.recipe_id
+                    GROUP BY trc.id;
+                """)
+                columns = [col[0] for col in cursor.description]
+                recipes = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+
+        # correct changes ------------
+        # with connection.cursor() as cursor:
+        #     cursor.execute("""
+        #         SELECT trc.*, AVG(tr.rating) AS avg_rating
+        #         FROM tabRecipe AS trc
+        #         LEFT JOIN tabReview AS tr ON trc.id = tr.recipe_id
+        #         GROUP BY trc.id;
+        #     """)
+        #     columns = [col[0] for col in cursor.description]
+        #     recipes = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        # if filters:
+        #     filters = json.loads(json.dumps(filters))  # Ensure it's a proper list of dicts
+        #     for f in filters:
+        #         field = f.get('field')
+        #         operator = f.get('operator')
+        #         value = f.get('value')
+        #         if field and operator and value:
+        #             if operator == '=':     
+        #                 recipes_data = [recipe for recipe in recipes if recipe.get(field) == value]
+        #             if operator == '!=':
+        #                 recipes_data = [recipe for recipe in recipes if recipe.get(field) == value]
+        #             if operator == 'in':
+        #                 recipes_data = [recipe for recipe in recipes if recipe.get(field) in value]
+        #             if operator == 'not in':
+        #                 recipes_data = [recipe for recipe in recipes if recipe.get(field) not in value]
+        #             elif operator == 'like':
+        #                 recipes_data = [recipe for recipe in recipes if value.lower() in recipe.get(field).lower()]
+        # correct changes end ----------------
         paginator = self.pagination_class()
-        page = paginator.paginate_queryset(recipes, request)
+        page = paginator.paginate_queryset(recipes_data, request)
 
-        serializer = CreateRecipieSerializer(page, many=True)
-        
-        
         if page is not None:
+            serializer = CreateRecipieSerializer(page, many=True)
             res = paginator.get_paginated_response(serializer.data)
-            return success_response(data = res.data, status=status.HTTP_200_OK)
+            return success_response(data = res.data, status=status.HTTP_200_OK, message='Recipes details')
 
-        return success_response(serializer.data, status=status.HTTP_200_OK)
+        serializer = CreateRecipieSerializer(recipes_data, many=True)
+        return success_response(serializer.data, status=status.HTTP_200_OK, message='Recipes details')
 
     def get_page_size(self, request):
         page_size = self.pagination_class.page_size
