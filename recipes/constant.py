@@ -1,7 +1,7 @@
 from rest_framework.pagination import PageNumberPagination
 
 
-RESPONSE_SUCSSS = {
+RESPONSE_SUCCESS = {
     "status": "success",
     "message": "success",
     "data": {}

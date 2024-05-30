@@ -36,7 +36,7 @@ class UserLoginSerializer(serializers.ModelSerializer):
         fields = ('email', 'password')
 
 
-class CreateRecipieSerializer(serializers.ModelSerializer):
+class CreateRecipeSerializer(serializers.ModelSerializer):
     # user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     id = serializers.IntegerField(read_only=True)
@@ -78,7 +78,7 @@ class FilterSerializer(serializers.Serializer):
         validate_field_and_value(field, operator, value)
         return data
 
-class ListRequestRecipieSerializer(serializers.Serializer):
+class ListRequestRecipeSerializer(serializers.Serializer):
     filters = FilterSerializer(many=True)
 
     class Meta:

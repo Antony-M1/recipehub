@@ -12,15 +12,15 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from django.db.utils import IntegrityError
 from .serializers import (
-    UserSerializer, UserLoginSerializer, CreateRecipieSerializer, CreateRecipeSerializer2,
+    UserSerializer, UserLoginSerializer, CreateRecipeSerializer, CreateRecipeSerializer2,
     ReviewSerializer, UpdateReviewSerializer, UpdateRecipeSerializer, AllReviewSerializer,
-    SearchSerializer, ListRequestRecipieSerializer
+    SearchSerializer, ListRequestRecipeSerializer
 )
 from .models import (
     Recipe, Review
 )
 from .utils import success_response
-from .constant import RESPONSE_SUCSSS, RESPONSE_FAILED, CustomPagination
+from .constant import RESPONSE_SUCCESS, RESPONSE_FAILED, CustomPagination
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.authentication import authenticate
@@ -52,8 +52,8 @@ class UserSignupAPI(CreateAPIView):
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
-            response = copy.deepcopy(RESPONSE_SUCSSS)
-            response["message"] = "User Created Sussfully"
+            response = copy.deepcopy(RESPONSE_SUCCESS)
+            response["message"] = "User Created Successfully"
             response["data"] = serializer.data
             return Response(response, status=status.HTTP_201_CREATED, headers=headers)
         except IntegrityError as ex:
@@ -83,8 +83,8 @@ class UserLoginAPI(CreateAPIView):
 
         if user:
             refresh = RefreshToken.for_user(user)
-            response = copy.deepcopy(RESPONSE_SUCSSS)
-            response["message"] = "Login Sussfully"
+            response = copy.deepcopy(RESPONSE_SUCCESS)
+            response["message"] = "Login Successfully"
             response["data"] = {
                 "user_info": user.get_user_data_for_response(),
                 "refresh": str(refresh),
@@ -102,22 +102,22 @@ class UserLoginAPI(CreateAPIView):
 class ListCreateRecipeAPI(CreateAPIView):
     
     queryset = Recipe.objects.all()
-    serializer_class = CreateRecipieSerializer
+    serializer_class = CreateRecipeSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
     
     @swagger_auto_schema(
         tags=['Recipe'],
         operation_description="Create Recipe",
-        request_body=CreateRecipieSerializer,
-        responses={201: CreateRecipieSerializer}
+        request_body=CreateRecipeSerializer,
+        responses={201: CreateRecipeSerializer}
     )
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return success_response(serializer.data, status=status.HTTP_201_CREATED, message="Recipe Created Sussfully")
+        return success_response(serializer.data, status=status.HTTP_201_CREATED, message="Recipe Created Successfully")
     
 class ListGetRecipeAPI(CreateAPIView):
     queryset = Recipe.objects.all()
@@ -131,11 +131,11 @@ class ListGetRecipeAPI(CreateAPIView):
     @swagger_auto_schema(
         tags=['Recipe'],
         operation_description="List Recipes",
-        request_body=ListRequestRecipieSerializer,
-        responses={200: CreateRecipieSerializer(many=True)}
+        request_body=ListRequestRecipeSerializer,
+        responses={200: CreateRecipeSerializer(many=True)}
     )
     def post(self, request):
-        serializer_class = ListRequestRecipieSerializer
+        serializer_class = ListRequestRecipeSerializer
         serializer = serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         filters = request.data.get('filters', [])
@@ -194,7 +194,6 @@ class ListGetRecipeAPI(CreateAPIView):
                     query += " GROUP BY trc.id"
                     query += " HAVING " + " AND ".join(having_conditions)
                     
-                
 
                 cursor.execute(query, parameters)
                 columns = [col[0] for col in cursor.description]
@@ -244,11 +243,11 @@ class ListGetRecipeAPI(CreateAPIView):
         page = paginator.paginate_queryset(recipes_data, request)
 
         if page is not None:
-            serializer = CreateRecipieSerializer(page, many=True)
+            serializer = CreateRecipeSerializer(page, many=True)
             res = paginator.get_paginated_response(serializer.data)
             return success_response(data = res.data, status=status.HTTP_200_OK, message='Recipes details')
 
-        serializer = CreateRecipieSerializer(recipes_data, many=True)
+        serializer = CreateRecipeSerializer(recipes_data, many=True)
         return success_response(serializer.data, status=status.HTTP_200_OK, message='Recipes details')
 
     def get_page_size(self, request):
@@ -279,7 +278,7 @@ class ListUpdateDeleteRecipeAPI(RetrieveUpdateDestroyAPIView):
             response["message"] = "You are not authorized to update this recipe"
             return Response(response, status=status.HTTP_403_FORBIDDEN)
         response = super().update(request, *args, **kwargs)
-        return success_response(data=response.data, status=status.HTTP_200_OK, message="Recipe Updated Sussfully")
+        return success_response(data=response.data, status=status.HTTP_200_OK, message="Recipe Updated Successfully")
 
 
     @swagger_auto_schema(
@@ -295,7 +294,7 @@ class ListUpdateDeleteRecipeAPI(RetrieveUpdateDestroyAPIView):
             response["message"] = "You are not authorized to delete this recipe"
             return Response(response, status=status.HTTP_403_FORBIDDEN)
         response = super().delete(request, *args, **kwargs)
-        return success_response(data=response.data, status=status.HTTP_204_NO_CONTENT, message="Recipe Deleted Sussfully")
+        return success_response(data=response.data, status=status.HTTP_204_NO_CONTENT, message="Recipe Deleted Successfully")
 
     @swagger_auto_schema(
         tags=['Recipe'],
@@ -318,10 +317,10 @@ class ListUpdateDeleteRecipeAPI(RetrieveUpdateDestroyAPIView):
         recipe = super().get(request, *args, **kwargs)
 
         if recipe:
-            response = copy.deepcopy(RESPONSE_SUCSSS)
+            response = copy.deepcopy(RESPONSE_SUCCESS)
             response['data']['recipe'] = recipe.data
             response['data']['reviews'] = reviews
-            response['message'] = "Recipe Retrieved Sussfully"
+            response['message'] = "Recipe Retrieved Successfully"
             return Response(response, status=status.HTTP_200_OK)
         else:
             response = copy.deepcopy(RESPONSE_FAILED)
@@ -344,7 +343,7 @@ class ReviewRecipeAPI(CreateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return success_response(serializer.data, status=status.HTTP_201_CREATED,message="Review Created Sussfully")
+        return success_response(serializer.data, status=status.HTTP_201_CREATED,message="Review Created Successfully")
 
 # Retrieve and Update API
 class ReviewDetailAPI(RetrieveUpdateDestroyAPIView):
@@ -359,7 +358,7 @@ class ReviewDetailAPI(RetrieveUpdateDestroyAPIView):
     )
     def get(self, request, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
-        return success_response(data=response.data, status=status.HTTP_200_OK, message='Review Retrieved Sussfully')
+        return success_response(data=response.data, status=status.HTTP_200_OK, message='Review Retrieved Successfully')
 
     @swagger_auto_schema(
         tags=['Reviews'],
@@ -374,7 +373,7 @@ class ReviewDetailAPI(RetrieveUpdateDestroyAPIView):
             response["message"] = "You are not authorized to update this review"
             return Response(response, status=status.HTTP_403_FORBIDDEN)
         response = super().update(request, *args, **kwargs)
-        return success_response(data=response.data, status=status.HTTP_200_OK, message="Review Updated Sussfully")
+        return success_response(data=response.data, status=status.HTTP_200_OK, message="Review Updated Successfully")
     
     
     @swagger_auto_schema(
@@ -390,7 +389,7 @@ class ReviewDetailAPI(RetrieveUpdateDestroyAPIView):
             response["message"] = "You are not authorized to delete this review"
             return Response(response, status=status.HTTP_403_FORBIDDEN)
         response = super().delete(request, *args, **kwargs)
-        return success_response(data=response.data, status=status.HTTP_200_OK, message="Review Deleted Sussfully")
+        return success_response(data=response.data, status=status.HTTP_200_OK, message="Review Deleted Successfully")
 
 
 
@@ -423,7 +422,7 @@ class SearchAPI(GenericAPIView):
                 if rows:
                     columns = [col[0] for col in cursor.description]
                     recipe = [dict(zip(columns, row)) for row in rows]
-                    response = copy.deepcopy(RESPONSE_SUCSSS)
+                    response = copy.deepcopy(RESPONSE_SUCCESS)
                     response['data']['search_results'] = recipe
                     return Response(response, status=status.HTTP_200_OK)
                 else:
