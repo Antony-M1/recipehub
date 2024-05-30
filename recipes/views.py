@@ -17,7 +17,7 @@ from .serializers import (
     SearchSerializer, ListRequestRecipeSerializer, RecipeSerializer
 )
 from .models import (
-    Recipe, Review
+    Recipe, Review, User
 )
 from .utils import success_response
 from .constant import RESPONSE_SUCCESS, RESPONSE_FAILED, CustomPagination
@@ -48,6 +48,14 @@ class UserSignupAPI(CreateAPIView):
     )
     def post(self, request, *args, **kwargs):
         try:
+            if User.objects.filter(email=request.data.get("email")).exists():
+                response = copy.deepcopy(RESPONSE_FAILED)
+                response["message"] = "User already exists"
+                return Response(response, status=status.HTTP_400_BAD_REQUEST)
+            if User.objects.filter(phone_number=request.data.get("phone_number")).exists():
+                response = copy.deepcopy(RESPONSE_FAILED)
+                response["message"] = "Phone number already used"
+                return Response(response, status=status.HTTP_400_BAD_REQUEST)
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
