@@ -96,11 +96,11 @@ class UpdateRecipeSerializer(serializers.ModelSerializer):
     preparation_steps = serializers.CharField(required=False)
     cooking_time = serializers.FloatField(required=False)
     serving_size = serializers.IntegerField(required=False)
-    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), required=False)
+    category_id = serializers.CharField(required=False)
 
     class Meta:
         model = Recipe
-        fields = ('id', 'user_id', 'title', 'description', 'ingredients', 'preparation_steps', 'cooking_time', 'serving_size', 'category')
+        fields = ('id', 'user_id', 'title', 'description', 'ingredients', 'preparation_steps', 'cooking_time', 'serving_size', 'category_id')
 
 class CreateRecipeSerializer2(serializers.ModelSerializer):
     class Meta:
