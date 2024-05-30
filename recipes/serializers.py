@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from recipes.models import User, Category, Recipe, Review
 from django.db import models
-from .validators import validate_rating
+from .validators import validate_rating, validate_field_and_value
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -52,6 +52,39 @@ class CreateRecipieSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ('id', 'category_id', 'avg_rating', 'user', 'title', 'description', 'ingredients', 'preparation_steps', 'cooking_time', 'serving_size')
+
+
+class FilterValueField(serializers.Field):
+    def to_internal_value(self, data):
+        if isinstance(data, list):
+            return data
+        try:
+            return int(data)
+        except ValueError:
+            try:
+                return float(data)
+            except ValueError:
+                return data
+            
+class FilterSerializer(serializers.Serializer):
+    field = serializers.CharField(max_length=100,  required=True)
+    operator = serializers.CharField(max_length=10,  required=True)
+    value = FilterValueField(allow_null=True, required=True)
+
+    def validate(self, data):
+        field = data.get('field')
+        value = data.get('value')
+        operator = data.get('operator')
+        validate_field_and_value(field, operator, value)
+        return data
+
+class ListRequestRecipieSerializer(serializers.Serializer):
+    filters = FilterSerializer(many=True)
+    
+    class Meta:
+        model = Recipe
+        fields = '__all__'
+
 
 class UpdateRecipeSerializer(serializers.ModelSerializer):
     user_id = serializers.HiddenField(default=serializers.CurrentUserDefault())
