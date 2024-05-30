@@ -18,7 +18,7 @@ def validate_field_and_value(field, operator, value):
         'serving_size': int,
         'category_id': str
     }
-    allowed_field_of_like_operator = ['title', 'description', 'ingredients'
+    allowed_field_of_like_operator = ['title', 'description', 'ingredients',
                                       'preparation_steps', 'category_id']
     allowed_operators = ['=', '!=', 'in', 'not in', 'like']
 
