@@ -71,7 +71,7 @@ class Category(models.Model):
     
 class Recipe(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    title = models.CharField(max_length=100)
+    title = models.CharField(max_length=100, unique=True)
     description = models.TextField()
     ingredients = models.TextField()
     preparation_steps = models.TextField()

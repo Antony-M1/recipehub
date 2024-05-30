@@ -60,5 +60,10 @@ python3.10 -m venv .venv
 pip install -r requirements.txt
 ```
 
+### Step 4: Collect Static Files
+```
+python manage.py collectstatic
+```
+
 </details>
 
