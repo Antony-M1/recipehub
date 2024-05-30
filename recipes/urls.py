@@ -24,7 +24,7 @@ from .views import (
     ReviewRecipeAPI,
     ReviewDetailAPI,
     ListUpdateDeleteRecipeAPI,
-    
+    SearchAPI
     
 )
 from rest_framework_simplejwt.views import (
@@ -40,6 +40,7 @@ urlpatterns = [
     path('recipe/<int:pk>', ListUpdateDeleteRecipeAPI.as_view(), name='update-recipe'),
     path('reviews', ReviewRecipeAPI.as_view(), name='create-review'),
     path('reviews/<int:pk>', ReviewDetailAPI.as_view(), name='review-detail'),
-    path('token', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('reviews/<int:pk>', ReviewDetailAPI.as_view(), name='review-detail'),
+    path('search/<str:query>', SearchAPI.as_view(), name='search'),
     path('token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
 ]

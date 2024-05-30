@@ -1,6 +1,8 @@
 # myapp/serializers.py
 from rest_framework import serializers
 from recipes.models import User, Category, Recipe, Review
+from django.db import models
+from .validators import validate_rating
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -38,17 +40,18 @@ class CreateRecipieSerializer(serializers.ModelSerializer):
     # user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     id = serializers.IntegerField(read_only=True)
+    avg_rating = serializers.FloatField(read_only=True)
     title = serializers.CharField(max_length=100)
     description = serializers.CharField()
     ingredients = serializers.CharField()
     preparation_steps = serializers.CharField()
     cooking_time = serializers.FloatField()
     serving_size = serializers.IntegerField()
-    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+    category_id = serializers.CharField()
     
     class Meta:
         model = Recipe
-        fields = ('id', 'user', 'title', 'description', 'ingredients', 'preparation_steps', 'cooking_time', 'serving_size', 'category')
+        fields = ('id', 'category_id', 'avg_rating', 'user', 'title', 'description', 'ingredients', 'preparation_steps', 'cooking_time', 'serving_size')
 
 class UpdateRecipeSerializer(serializers.ModelSerializer):
     user_id = serializers.HiddenField(default=serializers.CurrentUserDefault())
@@ -76,7 +79,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     id = serializers.IntegerField(read_only=True)
     recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
-    rating = serializers.IntegerField()
+    rating = serializers.IntegerField(validators=[validate_rating])
     comment = serializers.CharField()
 
     class Meta:
@@ -86,7 +89,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 class UpdateReviewSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all(), required=False)
-    rating = serializers.IntegerField(required=False)
+    rating = serializers.IntegerField(required=False, validators=[validate_rating])
     comment = serializers.CharField(required=False)
 
     class Meta:
@@ -102,4 +105,12 @@ class DeleteReviewSerializer(serializers.ModelSerializer):
 class AllReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
+        fields = '__all__'
+        
+
+
+class SearchSerializer(serializers.Serializer):
+    
+    search = serializers.CharField()
+    class Meta:
         fields = '__all__'

@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-
+from django.core.validators import MinValueValidator, MaxValueValidator
+from .validators import validate_rating
 
 # Create your models here.
 class CustomUserManager(BaseUserManager):
@@ -92,7 +93,7 @@ class Recipe(models.Model):
 class Review(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     recipe = models.ForeignKey(Recipe, related_name='reviews', on_delete=models.CASCADE)
-    rating = models.IntegerField()
+    rating = models.IntegerField(validators=[validate_rating])
     comment = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 

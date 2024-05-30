@@ -1,26 +1,28 @@
 import copy
 from django.shortcuts import render
 from django.http import HttpResponse
-from rest_framework.generics import CreateAPIView, GenericAPIView, RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView, DestroyAPIView, ListCreateAPIView
+from rest_framework.generics import CreateAPIView, GenericAPIView, RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView, DestroyAPIView, ListCreateAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from django.db.utils import IntegrityError
 from .serializers import (
     UserSerializer, UserLoginSerializer, CreateRecipieSerializer, CreateRecipeSerializer2,
-    ReviewSerializer, UpdateReviewSerializer, UpdateRecipeSerializer, AllReviewSerializer
+    ReviewSerializer, UpdateReviewSerializer, UpdateRecipeSerializer, AllReviewSerializer,
+    SearchSerializer
 )
 from .models import (
     Recipe, Review
 )
 from .utils import success_response
-from .constant import RESPONSE_SUCSSS, RESPONSE_FAILED
+from .constant import RESPONSE_SUCSSS, RESPONSE_FAILED, CustomPagination
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.authentication import authenticate
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django.db import connection
+from drf_yasg import openapi
 
 
 # Create your views here.
@@ -96,7 +98,7 @@ class ListCreateRecipeAPI(ListCreateAPIView):
     queryset = Recipe.objects.all()
     serializer_class = CreateRecipieSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = PageNumberPagination
+    pagination_class = CustomPagination
     
     @swagger_auto_schema(
         tags=['Recipe'],
@@ -111,30 +113,43 @@ class ListCreateRecipeAPI(ListCreateAPIView):
 
         return success_response(serializer.data, status=status.HTTP_201_CREATED, message="Recipe Created Sussfully")
     
-    # @swagger_auto_schema(
-    #     tags=['Recipe'],
-    #     operation_description="Create Recipe",
-    #     # request_body=CreateRecipieSerializer,
-    #     # responses={201: CreateRecipieSerializer}
-    # )
-    # def get(self, request):
-    #     response = super().get(request)
-    #     return success_response(data=response.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         tags=['Recipe'],
         operation_description="List Recipes"
     )
     def get(self, request):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT trc.*, AVG(tr.rating) AS avg_rating
+                FROM tabRecipe AS trc
+                LEFT JOIN tabReview AS tr ON trc.id = tr.recipe_id
+                GROUP BY trc.id;
+            """)
+            columns = [col[0] for col in cursor.description]
+            recipes = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(recipes, request)
+
+        serializer = CreateRecipieSerializer(page, many=True)
+        
+        
         if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            res = self.get_paginated_response(serializer.data)
+            res = paginator.get_paginated_response(serializer.data)
             return success_response(data = res.data, status=status.HTTP_200_OK)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return success_response(data=serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data, status=status.HTTP_200_OK)
+
+    def get_page_size(self, request):
+        page_size = self.pagination_class.page_size
+        if 'page_size' in request.query_params:
+            try:
+                page_size = int(request.query_params['page_size'])
+            except ValueError:
+                pass
+        return page_size
+
 
 class ListUpdateDeleteRecipeAPI(RetrieveUpdateDestroyAPIView):
     queryset = Recipe.objects.all()
@@ -266,3 +281,55 @@ class ReviewDetailAPI(RetrieveUpdateDestroyAPIView):
             return Response(response, status=status.HTTP_403_FORBIDDEN)
         response = super().delete(request, *args, **kwargs)
         return success_response(data=response.data, status=status.HTTP_200_OK, message="Review Deleted Sussfully")
+
+
+
+class SearchAPI(GenericAPIView):
+    # serializer_class = SearchSerializer
+    permission_classes = [IsAuthenticated]
+    
+    @swagger_auto_schema(
+        tags=['Search & Filter'],
+        operation_description="Search API",
+        # query_serializer=SearchSerializer,
+        # responses={200: openapi.Response('Response description', SearchSerializer)}
+    )
+    def get(self, request, *args, **kwargs):
+        query = kwargs.get('query', None)
+        
+        if query:
+            with connection.cursor() as cursor:
+                cursor.execute(f"""
+                    SELECT DISTINCT * FROM tabRecipe
+                    WHERE
+                        title LIKE '%{query}%' OR
+                        category_id LIKE '%{query}%' OR
+                        description LIKE '%{query}%' OR
+                        ingredients LIKE '%{query}%' OR
+                        cooking_time LIKE '{query}' OR
+                        serving_size LIKE '{query}'
+                """)
+                rows = cursor.fetchall()
+                if rows:
+                    columns = [col[0] for col in cursor.description]
+                    recipe = [dict(zip(columns, row)) for row in rows]
+                    response = copy.deepcopy(RESPONSE_SUCSSS)
+                    response['data']['search_results'] = recipe
+                    return Response(response, status=status.HTTP_200_OK)
+                else:
+                    response = copy.deepcopy(RESPONSE_FAILED)
+                    response['message'] = "No results found"
+                    return Response(response, status=status.HTTP_404_NOT_FOUND)
+        else:
+            response = copy.deepcopy(RESPONSE_FAILED)
+            response['message'] = "Please enter a search query"
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+# class RecipeFilterAPI(GenericAPIView):
+    
+#     serializer_class = RecipeFilterSerializer
+    
+#     def get(self, requests):
+#         pass
