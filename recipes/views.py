@@ -14,7 +14,7 @@ from django.db.utils import IntegrityError
 from .serializers import (
     UserSerializer, UserLoginSerializer, CreateRecipeSerializer, CreateRecipeSerializer2,
     ReviewSerializer, UpdateReviewSerializer, UpdateRecipeSerializer, AllReviewSerializer,
-    SearchSerializer, ListRequestRecipeSerializer
+    SearchSerializer, ListRequestRecipeSerializer, RecipeSerializer
 )
 from .models import (
     Recipe, Review
@@ -132,12 +132,13 @@ class ListGetRecipeAPI(CreateAPIView):
         tags=['Recipe'],
         operation_description="List Recipes",
         request_body=ListRequestRecipeSerializer,
-        responses={200: CreateRecipeSerializer(many=True)}
+        responses={200: RecipeSerializer(many=True)}
     )
     def post(self, request):
-        serializer_class = ListRequestRecipeSerializer
-        serializer = serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if request.data:
+            serializer_class = ListRequestRecipeSerializer
+            serializer = serializer_class(data=request.data)
+            serializer.is_valid(raise_exception=True)
         filters = request.data.get('filters', [])
 
         with connection.cursor() as cursor:
@@ -147,7 +148,6 @@ class ListGetRecipeAPI(CreateAPIView):
                 LEFT JOIN tabReview AS tr ON trc.id = tr.recipe_id
             """
             where_conditions = []
-            parameters = []
             having_conditions = []
 
             for f in filters:
@@ -156,35 +156,43 @@ class ListGetRecipeAPI(CreateAPIView):
                 value = f.get('value')
                 if field and operator and value:
                     if operator == '=':
+                        try:
+                            value = float(value)
+                        except ValueError as ex: 
+                            value = "'"+value+"'"
                         if field == 'avg_rating':
-                            having_conditions.append(f"{field} = %s")
+                            having_conditions.append(f"{field} = {value}")
                         else:
-                            where_conditions.append(f"{field} = %s")
-                        parameters.append(value)
+                            where_conditions.append(f"{field} ={value}")
+
                     elif operator == '!=':
+                        try:
+                            value = float(value)
+                        except ValueError as ex: 
+                            value = "'"+value+"'"
                         if field == 'avg_rating':
-                            having_conditions.append(f"{field} != %s")
+                            having_conditions.append(f"{field} != '{value}'")
                         else:
-                            where_conditions.append(f"{field} != %s")
-                        parameters.append(value)
+                            where_conditions.append(f"{field} != '{value}'")
+
                     elif operator == 'in':
+                        value_s = [str(v) for v in value]
+                        placeholders = ', '.join(value_s)
                         if field == 'avg_rating':
-                            having_conditions.append(f"{field} != %s")
-                        else:
-                            where_conditions.append(f"{field} IN %s")
-                        parameters.append(value)
+                            having_conditions.append(f"{field} IN ({placeholders})")
+                        else:                          
+                            where_conditions.append(f"{field} IN ({placeholders})")
+
                     elif operator == 'not in':
+                        value_s = [str(v) for v in value]
+                        placeholders = ', '.join(value_s)
                         if field == 'avg_rating':
-                            having_conditions.append(f"{field} NOT IN %s")
+                            having_conditions.append(f"{field} NOT IN '{value}'")
                         else:
-                            where_conditions.append(f"{field} NOT IN %s")
-                        parameters.append(value)
+                            where_conditions.append(f"{field} NOT IN '{value}'")
+
                     elif operator == 'like':
-                        if field == 'avg_rating':
-                            having_conditions.append(f"{field} NOT IN %s")
-                        else:
-                            where_conditions.append(f"{field} LIKE %s")
-                        parameters.append(f"%{value}%")
+                        where_conditions.append(f"CAST({field} AS TEXT) LIKE '%{value}%'")
 
             if where_conditions or having_conditions:
                 if where_conditions:
@@ -194,8 +202,8 @@ class ListGetRecipeAPI(CreateAPIView):
                     query += " GROUP BY trc.id"
                     query += " HAVING " + " AND ".join(having_conditions)
                     
-
-                cursor.execute(query, parameters)
+                print(query)
+                cursor.execute(query)
                 columns = [col[0] for col in cursor.description]
                 recipes_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
             else:
@@ -207,7 +215,7 @@ class ListGetRecipeAPI(CreateAPIView):
                     GROUP BY trc.id;
                 """)
                 columns = [col[0] for col in cursor.description]
-                recipes = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                recipes_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
         # correct changes ------------
@@ -243,11 +251,11 @@ class ListGetRecipeAPI(CreateAPIView):
         page = paginator.paginate_queryset(recipes_data, request)
 
         if page is not None:
-            serializer = CreateRecipeSerializer(page, many=True)
+            serializer = RecipeSerializer(page, many=True)
             res = paginator.get_paginated_response(serializer.data)
             return success_response(data = res.data, status=status.HTTP_200_OK, message='Recipes details')
 
-        serializer = CreateRecipeSerializer(recipes_data, many=True)
+        serializer = RecipeSerializer(recipes_data, many=True)
         return success_response(serializer.data, status=status.HTTP_200_OK, message='Recipes details')
 
     def get_page_size(self, request):
@@ -303,13 +311,19 @@ class ListUpdateDeleteRecipeAPI(RetrieveUpdateDestroyAPIView):
     )
     def get(self, request, *args, **kwargs):
         with connection.cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT
-                    tr.*,
-                    tu.first_name, tu.last_name
+                tr.*,
+                tu.first_name, 
+                tu.last_name
                 FROM
-                    tabReview AS tr
-                LEFT JOIN tabUser AS tu
+                tabReview AS tr
+                LEFT JOIN
+                tabUser AS tu ON tr.user_id = tu.id          
+                LEFT JOIN
+                tabRecipe AS rc ON tr.recipe_id = rc.id
+                WHERE 
+                tr.id = {kwargs['pk']};  
             """)
             rows = cursor.fetchall()
         columns = [col[0] for col in cursor.description]

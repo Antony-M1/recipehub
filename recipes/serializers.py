@@ -35,6 +35,22 @@ class UserLoginSerializer(serializers.ModelSerializer):
         model = User
         fields = ('email', 'password')
 
+class RecipeSerializer(serializers.Serializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    id = serializers.IntegerField(read_only=True)
+    avg_rating = serializers.FloatField(read_only=True)
+    title = serializers.CharField(max_length=100)
+    description = serializers.CharField()
+    ingredients = serializers.CharField()
+    preparation_steps = serializers.CharField()
+    cooking_time = serializers.IntegerField()
+    serving_size = serializers.IntegerField()
+    category_id = serializers.CharField()
+    
+    class Meta:
+        model = Recipe
+        fields = ('id', 'category_id', 'avg_rating', 'user', 'title', 'description', 'ingredients', 'preparation_steps', 'cooking_time', 'serving_size')
+
 
 class CreateRecipeSerializer(serializers.ModelSerializer):
     # user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
@@ -45,9 +61,9 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
     description = serializers.CharField()
     ingredients = serializers.CharField()
     preparation_steps = serializers.CharField()
-    cooking_time = serializers.FloatField()
+    cooking_time = serializers.IntegerField()
     serving_size = serializers.IntegerField()
-    category_id = serializers.CharField()
+    category_id = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), source='category')
     
     class Meta:
         model = Recipe
@@ -69,8 +85,8 @@ class FilterValueField(serializers.Field):
 class FilterSerializer(serializers.Serializer):
     field = serializers.CharField(max_length=100,  required=True)
     operator = serializers.CharField(max_length=10,  required=True)
-    value = FilterValueField(allow_null=True, required=True)
-
+    value = FilterValueField(required=True)
+        
     def validate(self, data):
         field = data.get('field')
         value = data.get('value')
@@ -79,7 +95,7 @@ class FilterSerializer(serializers.Serializer):
         return data
 
 class ListRequestRecipeSerializer(serializers.Serializer):
-    filters = FilterSerializer(many=True)
+    filters = FilterSerializer(many=True, required=False)
 
     class Meta:
         model = Recipe
@@ -94,9 +110,9 @@ class UpdateRecipeSerializer(serializers.ModelSerializer):
     description = serializers.CharField(required=False)
     ingredients = serializers.CharField(required=False)
     preparation_steps = serializers.CharField(required=False)
-    cooking_time = serializers.FloatField(required=False)
+    cooking_time = serializers.IntegerField(required=False)
     serving_size = serializers.IntegerField(required=False)
-    category_id = serializers.CharField(required=False)
+    category_id = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), source='category', required=False)
 
     class Meta:
         model = Recipe

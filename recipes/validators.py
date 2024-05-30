@@ -14,7 +14,7 @@ def validate_field_and_value(field, operator, value):
         'description': str,
         'ingredients': str,
         'preparation_steps': str,
-        'cooking_time': float,
+        'cooking_time': int,
         'serving_size': int,
         'category_id': str
     }
@@ -27,27 +27,28 @@ def validate_field_and_value(field, operator, value):
 
     if operator not in allowed_operators:
         raise ValidationError(f"Invalid Operator '{operator}'. Operator must be one of: {', '.join(allowed_operators)}.")
+    
+    # expected_type = allowed_fields[field]
+    # if operator in ['in', 'not in'] and not all(isinstance(x, expected_type) for x in value):
+    #     raise ValidationError(f"Invalid value type for field '{field}'. Expected {expected_type.__name__} of list.")
 
-    if operator in ['in', 'not in'] and not all(isinstance(x, float) for x in value):
-        raise ValidationError(f"Invalid value type for field '{field}'. Expected {allowed_fields[field].__name__} of list.")
+    # elif operator not in ['in', 'not in', 'like']:
+        
 
-    elif operator not in ['in', 'not in', 'like']:
-        expected_type = allowed_fields[field]
+    #     try:
+    #         if expected_type == float:
+    #             float(value)
+    #         elif expected_type == int:
+    #             int(value)
+    #         elif expected_type == str:
+    #             str(value)
+    #         elif expected_type == list:
+    #             list(value)
+    #     except ValueError:
+    #         raise ValidationError(f"Invalid value type for field '{field}'. Expected {expected_type.__name__}.")
 
-        try:
-            if expected_type == float:
-                float(value)
-            elif expected_type == int:
-                int(value)
-            elif expected_type == str:
-                str(value)
-            elif expected_type == list:
-                list(value)
-        except ValueError:
-            raise ValidationError(f"Invalid value type for field '{field}'. Expected {expected_type.__name__}.")
-
-    else:
-        if field in allowed_field_of_like_operator:
-            str(value)
-        else:
-            raise ValidationError(f"Only title, description, ingredients, preparation_steps, category_id these field are applicable for Like operator.")
+    # elif operator == 'like':
+    #     if field in allowed_field_of_like_operator:
+    #         str(value)
+    #     else:
+    #         raise ValidationError(f"Only title, description, ingredients, preparation_steps, category_id these field are applicable for Like operator.")
