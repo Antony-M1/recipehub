@@ -185,6 +185,7 @@ class ListGetRecipeAPI(CreateAPIView):
 
                     elif operator == 'in':
                         value_s = [str(v) for v in value]
+                        value_s = [f'"{v}"' for v in value]
                         placeholders = ', '.join(value_s)
                         if field == 'avg_rating':
                             having_conditions.append(f"{field} IN ({placeholders})")
@@ -331,7 +332,7 @@ class ListUpdateDeleteRecipeAPI(RetrieveUpdateDestroyAPIView):
                 LEFT JOIN
                 tabRecipe AS rc ON tr.recipe_id = rc.id
                 WHERE 
-                tr.id = {kwargs['pk']};  
+                tr.recipe_id = {kwargs['pk']};  
             """)
             rows = cursor.fetchall()
         columns = [col[0] for col in cursor.description]
